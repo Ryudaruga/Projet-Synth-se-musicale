@@ -31,4 +31,5 @@
 .\objects\adc_mcbstm32f200.o: C:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\STM32F2xx_HAL_Driver\Inc\stm32f2xx_hal_rtc_ex.h
 .\objects\adc_mcbstm32f200.o: C:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\STM32F2xx_HAL_Driver\Inc\stm32f2xx_hal_tim.h
 .\objects\adc_mcbstm32f200.o: C:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\STM32F2xx_HAL_Driver\Inc\stm32f2xx_hal_tim_ex.h
+.\objects\adc_mcbstm32f200.o: C:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\STM32F2xx_HAL_Driver\Inc\stm32f2xx_hal_usart.h
 .\objects\adc_mcbstm32f200.o: C:\Keil_v5\ARM\PACK\Keil\MDK-Middleware\7.0.0\Board\Board_ADC.h

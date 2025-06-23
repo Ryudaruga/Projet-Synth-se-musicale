@@ -680,12 +680,14 @@ ork --depend=.\objects\startup_stm32f207xx.d -o.\objects\startup_stm32f207xx.o
 -I"C:\Users\TEMP.GEII2.047\Documents\GitHub\Projet-Synth-se-musicale\Code_Keil\
 Projet_V3 Valentin\RTE" -I"C:\Users\TEMP.GEII2.047\Documents\GitHub\Projet-Synt
 h-se-musicale\Code_Keil\Projet_V3 Valentin\RTE\Device\STM32F207IGHx" -IC:\Keil_
-v5\ARM\PACK\ARM\CMSIS\5.6.0\CMSIS\Core\Include -IC:\Keil_v5\ARM\PACK\Keil\MDK-M
-iddleware\7.0.0\Board -IC:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\C
-MSIS\Device\ST\STM32F2xx\Include -IC:\Keil_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.
-0\Drivers\STM32F2xx_HAL_Driver\Inc --predefine="__UVISION_VERSION SETA 517" --p
-redefine="_RTE_ SETA 1" --predefine="STM32F207xx SETA 1" --list=.\listings\star
-tup_stm32f207xx.lst RTE\Device\STM32F207IGHx\startup_stm32f207xx.s
+v5\ARM\PACK\ARM\CMSIS\5.6.0\CMSIS\Core\Include -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\
+5.6.0\CMSIS\Driver\Include -IC:\Keil_v5\ARM\PACK\ARM\CMSIS\5.6.0\CMSIS\RTOS\RTX
+\INC -IC:\Keil_v5\ARM\PACK\Keil\MDK-Middleware\7.0.0\Board -IC:\Keil_v5\ARM\PAC
+K\Keil\STM32F2xx_DFP\2.10.0\Drivers\CMSIS\Device\ST\STM32F2xx\Include -IC:\Keil
+_v5\ARM\PACK\Keil\STM32F2xx_DFP\2.10.0\Drivers\STM32F2xx_HAL_Driver\Inc --prede
+fine="__RTX SETA 1" --predefine="__UVISION_VERSION SETA 517" --predefine="_RTE_
+ SETA 1" --predefine="STM32F207xx SETA 1" --list=.\listings\startup_stm32f207xx
+.lst RTE\Device\STM32F207IGHx\startup_stm32f207xx.s
 
 
 
@@ -1780,4 +1782,4 @@ Symbol: __use_two_region_memory
       None
 Comment: __use_two_region_memory unused
 3 symbols
-446 symbols in table
+447 symbols in table
