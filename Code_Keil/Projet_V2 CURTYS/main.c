@@ -3,6 +3,8 @@
 #include "cmsis_os.h" // Pour les fonctionnalités RTOS
 #include "Driver_USART.h" // Pour le pilote USART
 #include "Board_LED.h"    // Pour le contrôle des LEDs
+#include "stm32f2xx.h"                  // Device header
+
 
 // Déclaration de l'instance du driver USART
 extern ARM_DRIVER_USART Driver_USART1;
@@ -33,6 +35,8 @@ void Init_USART1(void) {
     Driver_USART1.Control(ARM_USART_CONTROL_RX, 1); // Activer la réception
     // Armer la première réception. Le pilote lira un caractère et appellera le callback.
     Driver_USART1.Receive(&rx_char, 1);
+	
+		//NVIC_SetPriority(USART1_IRQn, 5);
 }
 
 // --- Fonction de Callback de l'USART ---
