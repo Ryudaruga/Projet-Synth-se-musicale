@@ -19,6 +19,7 @@
 "oui\stm32f2xx_hal_exti.o"
 "oui\stm32f2xx_hal_tim.o"
 "oui\stm32f2xx_hal_tim_ex.o"
+"oui\stm32f2xx_hal_uart.o"
 "oui\system_stm32f2xx.o"
 --strict --scatter "OUI\OUI.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols

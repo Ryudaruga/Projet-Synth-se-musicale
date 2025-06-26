@@ -1,5 +1,6 @@
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <string.h>
+#include <stdlib.h>
 #include <math.h>
 
 #ifndef M_PI
@@ -9,63 +10,34 @@
 #define SINE_TABLE_SIZE 128
 uint16_t sine_table[SINE_TABLE_SIZE];
 
-/* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart1;
 DAC_HandleTypeDef hdac;
 DMA_HandleTypeDef hdma_dac1;
 TIM_HandleTypeDef htim6;
 
-/* Function prototypes -------------------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_DAC_Init(void);
-static void MX_TIM6_Init(void);
-void Generate_Sine_Table(void);
-void Set_Sine_Frequency(float freq_hz);
+char uart_rx_buffer[8];  // Pour recevoir des chaînes comme "N:C#4\n"
+volatile uint8_t uart_rx_ready = 0;
 
-/* MAIN ----------------------------------------------------------------------*/
-int main(void)
-{
-  HAL_Init();
-  SystemClock_Config();
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_DAC_Init();
-  MX_TIM6_Init();
+typedef struct {
+  const char *note;
+  float frequency;
+} NoteFrequency;
 
-  Generate_Sine_Table();
+NoteFrequency notes_octave4[] = {
+  {"C4", 261.63f}, {"C#4", 277.18f}, {"D4", 293.66f},
+  {"D#4", 311.13f}, {"E4", 329.63f}, {"F4", 349.23f},
+  {"F#4", 369.99f}, {"G4", 392.00f}, {"G#4", 415.30f},
+  {"A4", 440.00f}, {"A#4", 466.16f}, {"B4", 493.88f}
+};
 
-  HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
-  HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t*)sine_table, SINE_TABLE_SIZE, DAC_ALIGN_12B_R);
-  HAL_TIM_Base_Start(&htim6);
-
-  Set_Sine_Frequency(750.0f); // fréquence en Hz
-
-  while (1)
-  {
-    // Exemple dynamique (facultatif) :
-    // Set_Sine_Frequency(880.0f);
-    // HAL_Delay(1000);
-    // Set_Sine_Frequency(440.0f);
-    // HAL_Delay(1000);
-  }
-}
-
-/* -------------------------------------------------------------------------- */
-/* Génération table sinusoïdale 12 bits */
-void Generate_Sine_Table(void)
-{
-  for (int i = 0; i < SINE_TABLE_SIZE; i++)
-  {
+void Generate_Sine_Table(void) {
+  for (int i = 0; i < SINE_TABLE_SIZE; i++) {
     float angle = 2.0f * M_PI * i / SINE_TABLE_SIZE;
-    sine_table[i] = (uint16_t)(2047 + 2047 * sinf(angle)); // 12-bit centered at 2047
+    sine_table[i] = (uint16_t)(2047 + 2047 * sinf(angle));
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/* Changement de fréquence dynamique */
-void Set_Sine_Frequency(float freq_hz)
-{
+void Set_Sine_Frequency(float freq_hz) {
   if (freq_hz <= 0.0f) return;
 
   float timer_clock = 60000000.0f; // 60 MHz
@@ -79,11 +51,86 @@ void Set_Sine_Frequency(float freq_hz)
   __HAL_TIM_SET_AUTORELOAD(&htim6, period);
   __HAL_TIM_SET_COUNTER(&htim6, 0);
   __HAL_TIM_ENABLE(&htim6);
+
+  // Redémarrer DAC DMA
+  HAL_DAC_Start_DMA(&hdac, DAC_CHANNEL_1, (uint32_t*)sine_table, SINE_TABLE_SIZE, DAC_ALIGN_12B_R);
+}
+
+void Stop_Sine(void) {
+  HAL_DAC_Stop_DMA(&hdac, DAC_CHANNEL_1);
+  HAL_DAC_SetValue(&hdac, DAC_CHANNEL_1, DAC_ALIGN_12B_R, 0); // Silence
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+  uart_rx_ready = 1;
+  HAL_UART_Receive_IT(&huart1, (uint8_t *)uart_rx_buffer, sizeof(uart_rx_buffer));
+}
+
+void Process_Note_Command(void) {
+  uart_rx_buffer[7] = '\0'; // Sécurité
+
+  if (strlen(uart_rx_buffer) < 4) return;  // Ex: "N:C4\n"
+
+  char action = uart_rx_buffer[0];
+  if (uart_rx_buffer[1] != ':') return;
+
+  // Extraire la note entre ':' et '\n'
+  char clean_note[4] = {0};
+  int j = 0;
+  for (int i = 2; i < 7 && j < 3; i++) {
+    if (uart_rx_buffer[i] == '\n' || uart_rx_buffer[i] == '\r' || uart_rx_buffer[i] == '\0')
+      break;
+    clean_note[j++] = uart_rx_buffer[i];
+  }
+
+  for (int i = 0; i < sizeof(notes_octave4)/sizeof(NoteFrequency); i++) {
+    if (strcmp(clean_note, notes_octave4[i].note) == 0) {
+      if (action == 'N') {
+        Set_Sine_Frequency(notes_octave4[i].frequency);
+      } else {
+        Stop_Sine();
+      }
+      break;
+    }
+  }
+}
+
+/* Prototypes */
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
+static void MX_DAC_Init(void);
+static void MX_TIM6_Init(void);
+static void MX_USART1_UART_Init(void);
+void Error_Handler(void);
+
+/* Main */
+int main(void) {
+  HAL_Init();
+  SystemClock_Config();
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_DAC_Init();
+  MX_TIM6_Init();
+  MX_USART1_UART_Init();
+
+  Generate_Sine_Table();
+
+  HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
+  HAL_TIM_Base_Start(&htim6);
+  HAL_UART_Receive_IT(&huart1, (uint8_t *)uart_rx_buffer, sizeof(uart_rx_buffer));
+
+  while (1) {
+    if (uart_rx_ready) {
+      uart_rx_ready = 0;
+      Process_Note_Command();
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- */
-void SystemClock_Config(void)
-{
+/* Clock config */
+void SystemClock_Config(void) {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
@@ -111,8 +158,8 @@ void SystemClock_Config(void)
 }
 
 /* -------------------------------------------------------------------------- */
-static void MX_DAC_Init(void)
-{
+/* DAC init */
+static void MX_DAC_Init(void) {
   DAC_ChannelConfTypeDef sConfig = {0};
 
   hdac.Instance = DAC;
@@ -126,14 +173,14 @@ static void MX_DAC_Init(void)
 }
 
 /* -------------------------------------------------------------------------- */
-static void MX_TIM6_Init(void)
-{
+/* TIM6 init */
+static void MX_TIM6_Init(void) {
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 0; // 60 MHz
+  htim6.Init.Prescaler = 0;  // 60 MHz
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 12000 - 1; // Valeur initiale (modifiable via Set_Sine_Frequency)
+  htim6.Init.Period = 12000 - 1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
     Error_Handler();
@@ -145,8 +192,8 @@ static void MX_TIM6_Init(void)
 }
 
 /* -------------------------------------------------------------------------- */
-static void MX_DMA_Init(void)
-{
+/* DMA init */
+static void MX_DMA_Init(void) {
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
@@ -154,20 +201,29 @@ static void MX_DMA_Init(void)
 }
 
 /* -------------------------------------------------------------------------- */
-static void MX_GPIO_Init(void)
-{
+/* GPIO init */
+static void MX_GPIO_Init(void) {
   __HAL_RCC_GPIOA_CLK_ENABLE();
 }
 
 /* -------------------------------------------------------------------------- */
-void Error_Handler(void)
-{
-  __disable_irq();
-  while (1) { }
+/* USART1 init */
+static void MX_USART1_UART_Init(void) {
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+    Error_Handler();
 }
 
-#ifdef USE_FULL_ASSERT
-void assert_failed(uint8_t *file, uint32_t line)
-{
+/* -------------------------------------------------------------------------- */
+/* Error handler */
+void Error_Handler(void) {
+  __disable_irq();
+  while(1) {}
 }
-#endif
